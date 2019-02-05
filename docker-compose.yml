@@ -1,13 +1,32 @@
 version: '2'
 services:
-  rpi-node:
-    image: python:2
+  node-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: rpi-node-1
     working_dir: /app
+    environment:
+      - APP_ENV=development
+      - APP_DOCKER=true
     volumes:
       - ./:/app
-    command: bash -c "python -u run.py"
+    command: ["python","-u","run.py"]
     networks:
       - smart-remote_rpi-net
+  # node-2:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   hostname: rpi-node-2
+  #   working_dir: /app
+  #   environment:
+  #     - APP_ENV=development
+  #   volumes:
+  #     - ./:/app
+  #   command: ["python","-u","run.py"]
+  #   networks:
+  #     - smart-remote_rpi-net
 
 networks:
   smart-remote_rpi-net:

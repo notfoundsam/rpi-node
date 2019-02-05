@@ -1,15 +1,26 @@
-import socket
+#!/usr/bin/env python3
+import os
+from app import App
 
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-s.bind(('', 9090))
+if 'APP_ENV' in os.environ and os.environ['APP_ENV'] == 'development':
+    debug = True
+else:
+    debug = False
 
-try:
-    while True:
-        data, addr = s.recvfrom(1024)
-        print("my-ip:%s" % socket.gethostbyname(socket.gethostname()))
-        print(data)
+app = App()
 
-except:
-    s.close()
-    print("exit")
+if 'APP_DOCKER' in os.environ:
+    app.DB_HOST = 'db'
+    app.DB_PORT = '3306'
+    app.DB_NAME = 'smart_remote'
+    app.DB_USER = 'root'
+    app.DB_PASS = 'root'
+else:
+    app.DB_HOST = '192.168.100.111'
+    app.DB_PORT = '3306'
+    app.DB_NAME = 'smart_remote'
+    app.DB_USER = 'root'
+    app.DB_PASS = 'root'
+
+if __name__ == '__main__':
+    app.run(debug=debug)
