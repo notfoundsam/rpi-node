@@ -1,9 +1,9 @@
-import threading, socket, sys, json
+import threading, socket, sys, json, time, logging
 from .models import Node, Arduino, Button, Radio
-from .drivers import ArduinoDriver, ArduinoQueueItem
+from .drivers import ArduinoQueueItem
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app import logger, ir_reader
+from app import helper
 
 class DiscoverCatcher:
 
@@ -12,7 +12,7 @@ class DiscoverCatcher:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         sock.bind(('', 32000))
 
-        logger.info('Discovering...')
+        logging.info('Discovering...')
 
         data, addr = sock.recvfrom(1024)
         sock.close()
@@ -34,25 +34,33 @@ class RpiNode:
         self.interrupt = False
         
     def run(self):
-        logger.info('Configure arduinos')
-        logger.info('Debug: %r' % self.app.debug)
+        logging.info('Configure arduinos')
+        logging.info('Debug: %r' % self.app.debug)
         
-        if self.createArduinoDrivers() == False:
-            logger.error('The node not found in DB')
+        if self.app.createArduinoDrivers() == False:
+            logging.error('The node not found in DB')
             self.app.sock.close()
             return
 
         try:
-            logger.info('Strat listening')
+            logging.info('Strat listening')
+            message_buff = ''
+
             while True:
-                data = self.app.sock.recv(1024)
+                data = self.app.sock.recv(1)
                 
                 if data:
                     udata = data.decode()
-                    parser = EventParser(udata, self.app)
+
+                    if udata != "\n":
+                        message_buff += udata
+                        continue
+
+                    parser = EventParser(message_buff, self.app)
                     parser.start()
+                    message_buff = ''
                 else:
-                    logger.warning('Connection closed, empty response')
+                    logging.warning('Connection closed, empty response')
                     for arduino in self.app.ads:
                         self.app.ads[arduino].close()
                     self.app.sock.close()
@@ -60,42 +68,12 @@ class RpiNode:
 
         except KeyboardInterrupt:
             self.app.interrupt = True
+            logging.exception('Keyboard Interrupt')
 
         except Exception as e:
-            for arduino in self.app.ads:
-                self.app.ads[arduino].close()
-                                
-            self.app.sock.close()
-
-    def createArduinoDrivers(self):
-        session = self.app.createSession()
-        node = session.query(Node).filter_by(host_name=self.app.host_name).first()
-
-        if node is None:
-            session.close()
-            return False
-
-        arduinos = node.arduinos.all()
-        session.close()
-
-        if arduinos is not None:
-            for arduino in arduinos:
-                logger.info(str(arduino))
-                ad = ArduinoDriver(self.app, arduino.mode)
-                ad.connect(arduino.usb)
-                self.app.ads[arduino.usb] = ad
-
-        return True
-
-class SocketEvent:
-
-    def __init__(self):
-        self.user_id = None
-        self.button_id = None
-        self.sock = None
-        self.button = None
-        self.radio = None
-
+            self.app.interrupt = True
+            logging.exception('Main thread error')
+        
 class EventParser(threading.Thread):
 
     def __init__(self, udata, app):
@@ -104,35 +82,94 @@ class EventParser(threading.Thread):
         self.app = app
 
     def run(self):
-        data = json.loads(self.udata)
+        try:
+            data = json.loads(self.udata)
+        except ValueError as e:
+            logging.debug(self.udata)
+            logging.exception('Broken json from socket')
+            return
 
-        if 'event' in data and data['event'] == 'pushButton':
+        # Stop listenning Arduinos
+        if self.app.status == 'started' and 'event' in data and data['event'] == 'stop':
+            logging.info('Try to stop service')
+            self.app.status == 'stopping'
+
+            for arduino in self.app.ads:
+                self.app.ads[arduino].close()
+
+            time.sleep(2)
+            self.app.status = 'stopped'
+            response = "%s\n" % json.dumps({'type': 'system', 'result': 'success', 'service': 'stopped'})
+            self.app.sock.send(response.encode())
+
+        # Start listenning Arduinos
+        elif self.app.status == 'stopped' and 'event' in data and data['event'] == 'start':
+            logging.info('Try to start service')
+            if self.app.createArduinoDrivers() == False:
+                logging.error('The node not found in DB')
+                self.app.sock.close()
+
+            response = "%s\n" % json.dumps({'type': 'system', 'result': 'success', 'service': 'started'})
+            self.app.sock.send(response.encode())
+
+        # Restart listenning Arduinos
+        elif self.app.status == 'started' and 'event' in data and data['event'] == 'restart':
+            logging.info('Try to restart service')
+            self.app.status == 'restarting'
+
+            for arduino in self.app.ads:
+                self.app.ads[arduino].close()
+
+            time.sleep(2)
+
+            if self.app.createArduinoDrivers() == False:
+                logging.error('The node not found in DB')
+                self.app.sock.close()
+
+            response = "%s\n" % json.dumps({'type': 'system', 'result': 'success', 'service': 'restarted'})
+            self.app.sock.send(response.encode())
+            
+        elif self.app.status == 'started' and 'event' in data and data['event'] == 'pushButton':
             self.pushButton(data)
-        elif 'event' in data and data['event'] == 'catchIr':
-            logger.info(data['host_name'])
-            ir_signal = ir_reader.read_signal()
-            response = json.dumps({'type': 'ir', 'result': 'success', 'ir_signal': ir_signal})
+
+        elif self.app.status == 'started' and 'event' in data and data['event'] == 'catchIr':
+            logging.info(data['host_name'])
+            ir_signal = helper.read_signal()
+            ir_signal = helper.compress_signal(ir_signal)
+            response = "%s\n" % json.dumps({'type': 'ir', 'result': 'success', 'ir_signal': ir_signal})
             self.app.sock.send(response.encode())
 
     def pushButton(self, data):
         session = self.app.createSession()
-        button, arduino, radio = session.query(Button, Arduino, Radio).filter(Button.id == data['button_id']).first()
+        button = session.query(Button).get(data['button_id'])
+        radio = session.query(Radio).get(button.radio_id)
+        arduino = radio.arduino
+        # button, arduino, radio = session.query(Radio).filter(Button.id == data['button_id']).first()
         session.close()
 
         # Debug
-        # logger.info(str(button))
-        # logger.info(str(button.execute))
+        # logging.info(str(button))
+        # logging.info(str(button.execute))
 
         if arduino is not None and radio is not None:
             if arduino.usb in self.app.ads:
                 props = {
-                    'button_type': button.type,
-                    'button_exec': button.execute,
                     'radio_pipe': radio.pipe,
+                    'radio_type': radio.type,
+                    'message': button.message,
                     'user_id': data['user_id']
                 }
 
-                item = ArduinoQueueItem(props, 1)
-                self.app.ads[arduino.usb].queue.putItem(item)
+                # pre_data.append('%si' % chr(self.props['radio_pipe']))
+                full_message = '%s%s\n' % (chr(int(radio.pipe)), button.message)
+                
+                if radio.on_request == 1:
+                    item = ArduinoQueueItem(full_message, 1)
+                    item.setExpiration(radio.expired_after)
+                    item.setRadioPipe(radio.pipe)
+                    self.app.ads[arduino.usb].addToRequestBuffer(item)
+                else:
+                    item = ArduinoQueueItem(full_message, 2)
+                    self.app.ads[arduino.usb].addToQueue(item)
         else:
-            logger.warning('Bad settings')
+            logging.warning('Bad settings')

@@ -1,9 +1,9 @@
-import socket, sys, time
+import socket, sys, time, logging
 from .service import RpiNode, DiscoverCatcher
-from .models import Rc
+from .models import Rc, Node
+from .drivers import ArduinoDriver
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app import logger
 
 class App():
     host = None
@@ -22,8 +22,18 @@ class App():
         return session
 
     def run(self, debug = False):
+        logging.basicConfig(
+            format='%(asctime)s - [%(levelname)s] %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+            level= logging.DEBUG if debug else logging.ERROR,
+            handlers=[
+                logging.FileHandler("app.log"),
+                logging.StreamHandler()
+            ])
+
         self.debug = debug
         self.interrupt = False
+        self.status = 'stopped'
         self.createDbUri()
 
         while True:
@@ -34,8 +44,8 @@ class App():
 
                 try:
                     self.sock.connect((self.host, self.port))
-                    logger.info('Handshake with the server')
-                    request = "%s:%s" % (socket.gethostname(), 'handshake')
+                    logging.info('Handshake with the server')
+                    request = "%s:%s\n" % (socket.gethostname(), 'handshake')
                     self.sock.send(request.encode())
 
                     # Wait for handshake
@@ -45,18 +55,18 @@ class App():
                         udata = data.decode()
 
                         if udata != 'accept':
-                            logger.warning('Did not accept')
+                            logging.warning('Did not accept')
                             self.sock.close()
                             continue
                         else:
-                            logger.info('Accepted')
+                            logging.info('Accepted')
                     else:
-                        logger.warning('Empty response')
+                        logging.warning('Empty response')
                         self.sock.close()
                         continue
                 
                 except Exception as e:
-                    logger.error('The server closed the connection')
+                    logging.exception('The server closed the connection')
                     for arduino in self.ads:
                         self.ads[arduino].close()
                     self.sock.close()
@@ -71,6 +81,28 @@ class App():
                     time.sleep(2)
                     self.sock.close()
                     break
+
+    def createArduinoDrivers(self):
+        session = self.createSession()
+        node = session.query(Node).filter_by(host_name=self.host_name).first()
+
+        if node is None:
+            session.close()
+            return False
+
+        arduinos = node.arduinos.all()
+        session.close()
+
+        if arduinos is not None:
+            for arduino in arduinos:
+                logging.info(str(arduino))
+                ad = ArduinoDriver(self)
+                ad.connect(arduino.usb)
+                self.ads[arduino.usb] = ad
+
+        self.status = 'started'
+
+        return True
 
     def createDbUri(self):
         self.db_uri = 'mysql+mysqlconnector://%s:%s@%s:%s/%s' % (self.DB_USER,self.DB_PASS,self.DB_HOST,self.DB_PORT,self.DB_NAME)
