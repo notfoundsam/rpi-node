@@ -9,15 +9,18 @@ class App():
     host = None
     port = 32001
     ads = {}
-    db_uri = None
+    # db_uri = None
 
     def __init__(self):
         self.catcher = DiscoverCatcher()
         self.host_name = socket.gethostname()
 
-    def createSession(self):
-        engine = create_engine(self.db_uri)
+        engine = create_engine(self.createDbUri(), echo=self.debug, pool_recycle=3600)
         Session = sessionmaker(bind=engine)
+        self.session = Session()
+
+    def createSession(self):
+        
         session = Session()
         return session
 
@@ -83,15 +86,15 @@ class App():
                     break
 
     def createArduinoDrivers(self):
-        session = self.createSession()
-        node = session.query(Node).filter_by(host_name=self.host_name).first()
+        
+        node = self.session.query(Node).filter_by(host_name=self.host_name).first()
 
         if node is None:
-            session.close()
+            # session.close()
             return False
 
         arduinos = node.arduinos.all()
-        session.close()
+        # session.close()
 
         if arduinos is not None:
             for arduino in arduinos:
@@ -105,4 +108,4 @@ class App():
         return True
 
     def createDbUri(self):
-        self.db_uri = 'mysql+mysqlconnector://%s:%s@%s:%s/%s' % (self.DB_USER,self.DB_PASS,self.DB_HOST,self.DB_PORT,self.DB_NAME)
+        return 'mysql+mysqlconnector://%s:%s@%s:%s/%s' % (self.DB_USER,self.DB_PASS,self.DB_HOST,self.DB_PORT,self.DB_NAME)

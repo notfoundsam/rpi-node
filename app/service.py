@@ -57,7 +57,7 @@ class RpiNode:
                         continue
 
                     parser = EventParser(message_buff, self.app)
-                    parser.start()
+                    parser.run()
                     message_buff = ''
                 else:
                     logging.warning('Connection closed, empty response')
@@ -74,10 +74,10 @@ class RpiNode:
             self.app.interrupt = True
             logging.exception('Main thread error')
         
-class EventParser(threading.Thread):
+class EventParser():
 
     def __init__(self, udata, app):
-        threading.Thread.__init__(self)
+        # threading.Thread.__init__(self)
         self.udata = udata
         self.app = app
 
@@ -140,12 +140,12 @@ class EventParser(threading.Thread):
             self.app.sock.send(response.encode())
 
     def pushButton(self, data):
-        session = self.app.createSession()
+        session = self.app.session
         button = session.query(Button).get(data['button_id'])
         radio = session.query(Radio).get(button.radio_id)
         arduino = radio.arduino
         # button, arduino, radio = session.query(Radio).filter(Button.id == data['button_id']).first()
-        session.close()
+        # session.close()
 
         # Debug
         # logging.info(str(button))
