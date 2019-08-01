@@ -132,8 +132,7 @@ class PackageManager(threading.Thread):
                 if self.buffer[package].getType() == 'ev':
                     logging.info('ev')
                     se = SocketEvent(self.app, self.buffer[package])
-                    se.setDaemon(True)
-                    se.start()
+                    se.run()
                 elif self.buffer[package].getType() == 'rq':
                     logging.info('rq')
                     self.ad.checkRequest(self.buffer[package])
@@ -347,10 +346,10 @@ class Package():
                 del message['tp']
                 self.message = message
 
-class SocketEvent(threading.Thread):
+class SocketEvent():
 
     def __init__(self, app, package):
-        threading.Thread.__init__(self)
+        # threading.Thread.__init__(self)
         self.app = app
         self.package = package
 
