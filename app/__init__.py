@@ -9,20 +9,15 @@ class App():
     host = None
     port = 32001
     ads = {}
-    # db_uri = None
 
     def __init__(self):
         self.catcher = DiscoverCatcher()
         self.host_name = socket.gethostname()
 
+    def createSession(self):
         engine = create_engine(self.createDbUri(), echo=self.debug, pool_recycle=3600)
         Session = sessionmaker(bind=engine)
         self.session = Session()
-
-    def createSession(self):
-        
-        session = Session()
-        return session
 
     def run(self, debug = False):
         logging.basicConfig(
@@ -37,7 +32,7 @@ class App():
         self.debug = debug
         self.interrupt = False
         self.status = 'stopped'
-        self.createDbUri()
+        self.createSession()
 
         while True:
             self.host = self.catcher.catchIP()
