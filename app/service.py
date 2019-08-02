@@ -1,8 +1,6 @@
 import threading, socket, sys, json, time, logging
 from .models import Node, Arduino, Button, Radio
 from .drivers import ArduinoQueueItem
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from app import helper
 
 class DiscoverCatcher:
@@ -27,59 +25,12 @@ class DiscoverCatcher:
         except socket.error:
             return None
 
-class RpiNode:
-
-    def __init__(self, app):
-        self.app = app
-        self.interrupt = False
-        
-    def run(self):
-        logging.info('Configure arduinos')
-        logging.info('Debug: %r' % self.app.debug)
-        
-        if self.app.createArduinoDrivers() == False:
-            logging.error('The node not found in DB')
-            self.app.sock.close()
-            return
-
-        try:
-            logging.info('Strat listening')
-            message_buff = ''
-
-            while True:
-                data = self.app.sock.recv(1)
-                
-                if data:
-                    udata = data.decode()
-
-                    if udata != "\n":
-                        message_buff += udata
-                        continue
-
-                    parser = EventParser(message_buff, self.app)
-                    parser.run()
-                    message_buff = ''
-                else:
-                    logging.warning('Connection closed, empty response')
-                    for arduino in self.app.ads:
-                        self.app.ads[arduino].close()
-                    self.app.sock.close()
-                    break
-
-        except KeyboardInterrupt:
-            self.app.interrupt = True
-            logging.exception('Keyboard Interrupt')
-
-        except Exception as e:
-            self.app.interrupt = True
-            logging.exception('Main thread error')
-        
 class EventParser():
 
-    def __init__(self, udata, app):
+    def __init__(self, app, udata):
         # threading.Thread.__init__(self)
-        self.udata = udata
         self.app = app
+        self.udata = udata
 
     def run(self):
         try:
@@ -140,12 +91,12 @@ class EventParser():
             self.app.sock.send(response.encode())
 
     def pushButton(self, data):
-        session = self.app.session
+        session = self.app.db_session()
         button = session.query(Button).get(data['button_id'])
         radio = session.query(Radio).get(button.radio_id)
         arduino = radio.arduino
         # button, arduino, radio = session.query(Radio).filter(Button.id == data['button_id']).first()
-        # session.close()
+        session.close()
 
         # Debug
         # logging.info(str(button))
