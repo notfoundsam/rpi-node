@@ -447,7 +447,7 @@ class SerialEmulator():
         logging.info('SERIAL %s: Opened' % self.port)
         self.writer.setEmulator(self)
         self.writer.setDaemon(True)
-        # self.writer.start()
+        self.writer.start()
 
     def flushInput(self):
         logging.info('SERIAL %s: flushInput' % self.port)
