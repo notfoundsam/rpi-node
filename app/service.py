@@ -90,9 +90,9 @@ class EventParser():
             response = "%s\n" % json.dumps({'type': 'ir', 'result': 'success', 'ir_signal': ir_signal})
             self.app.sock.send(response.encode())
 
-    def pushButton(self, data):
+    def pushButton(self, event):
         session = self.app.db_session()
-        button = session.query(Button).get(data['button_id'])
+        button = session.query(Button).get(event['button_id'])
         radio = session.query(Radio).get(button.radio_id)
         arduino = radio.arduino
         # button, arduino, radio = session.query(Radio).filter(Button.id == data['button_id']).first()
@@ -104,12 +104,12 @@ class EventParser():
 
         if arduino is not None and radio is not None:
             if arduino.usb in self.app.ads:
-                props = {
-                    'radio_pipe': radio.pipe,
-                    'radio_type': radio.type,
-                    'message': button.message,
-                    'user_id': data['user_id']
-                }
+                # props = {
+                #     'radio_pipe': radio.pipe,
+                #     'radio_type': radio.type,
+                #     'message': button.message,
+                #     'event': event
+                # }
 
                 # pre_data.append('%si' % chr(self.props['radio_pipe']))
                 full_message = '%s%s\n' % (chr(int(radio.pipe)), button.message)
@@ -118,9 +118,11 @@ class EventParser():
                     item = ArduinoQueueItem(full_message, 1)
                     item.setExpiration(radio.expired_after)
                     item.setRadioPipe(radio.pipe)
+                    item.setOriginEvent(event)
                     self.app.ads[arduino.usb].addToRequestBuffer(item)
                 else:
                     item = ArduinoQueueItem(full_message, 2)
+                    item.setOriginEvent(event)
                     self.app.ads[arduino.usb].addToQueue(item)
         else:
             logging.warning('Bad settings')

@@ -169,7 +169,7 @@ class ArduinoQueue(threading.Thread):
 
             if not self.workQueue.empty():
                 queue_item = self.workQueue.get()
-                queue_item.run(self.pm, self.ser)
+                queue_item.run(self.app, self.pm, self.ser)
             else:
                 if self.ser.in_waiting > 0:
                     # logging.info('AAAA')
@@ -191,6 +191,7 @@ class ArduinoQueueItem():
         self.expired_at = None
         self.radio_id = None
         self.order = None
+        self.origin_event = None
 
     def setExpiration(self, expire_after):
         self.expired_at = time.time() + expire_after
@@ -200,6 +201,9 @@ class ArduinoQueueItem():
 
     def setOrder(self, order):
         self.order = order
+    
+    def setOriginEvent(self, origin_event):
+        self.origin_event = origin_event
 
     def getRadioPipe(self):
         return self.radio_id
@@ -210,7 +214,7 @@ class ArduinoQueueItem():
     def isExpired(self):
         return (self.expired_at < time.time())
 
-    def run(self, pm, ser):
+    def run(self, app, pm, ser):
         partial_signal = [self.message[i:i+self.buffer] for i in range(0, len(self.message), self.buffer)]
         
         for part in partial_signal:
@@ -228,7 +232,7 @@ class ArduinoQueueItem():
 
                 if int(time.time() - start_at) > 0.5:
                     logging.warning('waiting timeout')
-                    error = True
+                    error = 'waiting timeout'
                     break
                 elif response.strip() == '':
                     logging.warning('empty response')
@@ -236,26 +240,30 @@ class ArduinoQueueItem():
                     break
                 elif response.strip() == ':overflow:':
                     logging.warning('overflow')
-                    error = True
+                    error = 'overflow'
                     break
                 elif response.strip() == ':timeout:':
                     logging.warning('timeout')
-                    error = True
+                    error = 'timeout'
                     break
                 elif response.strip() == ':ack:':
                     continue
                 elif response.strip() == ':fail:':
                     logging.info('fail')
-                    error = True
+                    error = 'fail'
                     break
                 elif response.strip() == ':success:':
                     logging.info('success')
+                    response = "%s\n" % json.dumps({'type': 'response', 'result': 'success', 'origin_event': self.origin_event})
+                    app.sock.send(response.encode())
                     break
                 else:
                     pm.addPackage(SerialPackage(response, ser.port))
                     logging.info(response.strip())
 
-            if error:
+            if error != False:
+                response = "%s\n" % json.dumps({'type': 'response', 'result': 'error', 'error': error, 'origin_event': self.origin_event})
+                app.sock.send(response.encode())
                 break
 
 class SerialPackage():
@@ -439,7 +447,7 @@ class SerialEmulator():
         logging.info('SERIAL %s: Opened' % self.port)
         self.writer.setEmulator(self)
         self.writer.setDaemon(True)
-        self.writer.start()
+        # self.writer.start()
 
     def flushInput(self):
         logging.info('SERIAL %s: flushInput' % self.port)

@@ -9,3 +9,5 @@ stop:
 	docker-compose stop
 ps:
 	ps ax | grep run.py
+log:
+	tail -F app.log
