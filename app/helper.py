@@ -145,4 +145,4 @@ def compress_signal(signal):
     pre_data.append(str(round(sum(one)/len(one))))
 
     message = ' '.join(pre_data + data)
-    return '%s\n' % message
+    return 'i%s' % message

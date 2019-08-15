@@ -11,11 +11,10 @@ class ArduinoDriver():
 
     def __init__(self, app):
         self.app = app
-        self.writer = SerialWriter()
 
     def connect(self, port):
         if self.app.emulation == True:
-            self.ser = SerialEmulator(self.writer)
+            self.ser = SerialEmulator()
         else:
             self.ser = serial.Serial()
             
@@ -36,8 +35,7 @@ class ArduinoDriver():
         self.aq.start()
 
     def close(self):
-        logging.info('Close Driver %s' % self.ser.port)
-        self.writer.is_running = False
+        self.ser.close()
         self.aq.is_running = False
         self.pm.is_running = False
 
@@ -422,8 +420,8 @@ class SerialWriter(threading.Thread):
 
 class SerialEmulator():
 
-    def __init__(self, writer):
-        self.writer = writer
+    def __init__(self):
+        self.writer = SerialWriter()
         self.in_waiting = 0
         self.baudrate = 9600
         self.timeout = 0
@@ -485,3 +483,7 @@ class SerialEmulator():
             else:
                 time.sleep(1)
                 return ''.encode()
+
+    def close(self):
+        self.writer.is_running = False
+        logging.info('Close Driver %s' % self.port)
