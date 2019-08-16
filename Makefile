@@ -10,6 +10,6 @@ stop:
 ps:
 	ps ax | grep run.[py]
 kill:
-	ps -ef | grep run.[py] | awk '{print $$2}' | xargs kill -9
+	ps -ef | grep run.[py] | awk '{print $$2}' | xargs kill
 log:
 	tail -F app.log
