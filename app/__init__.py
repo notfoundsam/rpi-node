@@ -134,8 +134,11 @@ class App():
             for arduino in arduinos:
                 logging.info(str(arduino))
                 ad = ArduinoDriver(self)
-                ad.connect(arduino.usb)
-                self.ads[arduino.usb] = ad
+
+                if ad.connect(arduino.usb) == True:
+                    self.ads[arduino.usb] = ad
+                else:
+                    logging.warning('Arduino bad port: %s' % arduino.usb)
 
         self.status = 'started'
 

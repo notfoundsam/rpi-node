@@ -21,7 +21,11 @@ class ArduinoDriver():
         self.ser.baudrate = self.ser_baudrate
         self.ser.port = '/dev/%s' % port
         self.ser.timeout = self.ser_timeout
-        self.ser.open()
+        
+        try:
+            self.ser.open()
+        except Exception as e:
+            return False
 
         # Only after write sketch into Arduino
         time.sleep(0.5)
@@ -33,6 +37,8 @@ class ArduinoDriver():
         self.aq.setDaemon(True)
         self.pm.start()
         self.aq.start()
+
+        return True
 
     def close(self):
         self.ser.close()

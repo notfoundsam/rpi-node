@@ -86,9 +86,14 @@ class EventParser():
         elif self.app.status == 'started' and 'event' in data and data['event'] == 'catchIr':
             logging.info(data['host_name'])
             ir_signal = helper.read_signal()
-            ir_signal = helper.compress_signal(ir_signal)
-            response = "%s\n" % json.dumps({'type': 'ir', 'result': 'success', 'ir_signal': ir_signal})
-            self.app.sock.send(response.encode())
+
+            if ir_signal:
+                ir_signal = helper.compress_signal(ir_signal)
+                response = "%s\n" % json.dumps({'type': 'ir', 'result': 'success', 'ir_signal': ir_signal})
+                self.app.sock.send(response.encode())
+            else:
+                response = "%s\n" % json.dumps({'type': 'ir', 'result': 'error', 'error': 'No signal'})
+                self.app.sock.send(response.encode())
 
     def pushButton(self, event):
         session = self.app.db_session()

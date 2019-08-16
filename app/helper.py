@@ -10,7 +10,8 @@ def read_signal():
 
     # Using for development
     if 'APP_ENV' in os.environ and os.environ['APP_ENV'] == 'development':
-        time.sleep(3)
+        # time.sleep(3)
+        # return ''
         # signal = ''
         
         # for x in range(1,40):
