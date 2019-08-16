@@ -8,8 +8,8 @@ up-dev:
 stop:
 	docker-compose stop
 ps:
-	ps ax | grep 'puthon3 run.py'
+	ps ax | grep 'python3 run.py'
 kill:
-	kill $(ps ax | grep 'puthon3 run.py' | awk '{print $1}')
+	kill $(ps ax | grep 'python3 run.py' | awk '{print $1}')
 log:
 	tail -F app.log
