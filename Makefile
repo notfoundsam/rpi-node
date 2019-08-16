@@ -8,7 +8,7 @@ up-dev:
 stop:
 	docker-compose stop
 ps:
-	ps ax | grep [r]un.py
+	ps ax | grep r[u]n.py
 kill:
 	ps -ef | grep [r]un.py | awk '{print $$2}' | xargs kill -9
 log:
