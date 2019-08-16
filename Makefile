@@ -10,6 +10,6 @@ stop:
 ps:
 	ps ax | grep 'python3 run.py'
 kill:
-	kill $(ps ax | grep 'python3 run.py' | awk '{print $1}')
+	kill $(ps ax | grep '[p]ython3 run.py' | awk '{print $1}')
 log:
 	tail -F app.log
