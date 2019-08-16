@@ -10,6 +10,6 @@ stop:
 ps:
 	ps ax | grep [r]un.py
 kill:
-	kill $(ps ax | grep [r]un.py | awk '{print $1}')
+	kill ps ax | grep [r]un.py | awk '{print $1}'
 log:
 	tail -F app.log
