@@ -109,13 +109,6 @@ class EventParser():
 
         if arduino is not None and radio is not None:
             if arduino.usb in self.app.ads:
-                # props = {
-                #     'radio_pipe': radio.pipe,
-                #     'radio_type': radio.type,
-                #     'message': button.message,
-                #     'event': event
-                # }
-
                 # pre_data.append('%si' % chr(self.props['radio_pipe']))
                 full_message = '%s%s\n' % (chr(int(radio.pipe)), button.message)
                 
