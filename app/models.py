@@ -96,3 +96,15 @@ class Radio(Base):
 
     def __repr__(self):
         return '<Radio (id=%r, name=%s)>' % (self.id, self.name)
+
+class Mqtt(Base):
+    __tablename__ = 'mqtt'
+
+    id = Column(Integer, primary_key = True)
+    name = Column(String(50))
+    topic = Column(String(200))
+    order = Column(Integer)
+    timestamp = Column(DateTime)
+
+    def __repr__(self):
+        return '<Mqtt (id=%r, name=%s)>' % (self.id, self.name)
