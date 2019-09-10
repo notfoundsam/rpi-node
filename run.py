@@ -5,7 +5,7 @@ from app import App
 if 'APP_ENV' in os.environ and os.environ['APP_ENV'] == 'development':
     debug = True
 else:
-    debug = True
+    debug = False
 
 app = App()
 
