@@ -358,6 +358,31 @@ class Package():
                 del message['tp']
                 self.message = message
 
+                    if 'h' in data:
+                        try:
+                            data['h'] = float(data['h'])
+                        except ValueError:
+                            logging.error('Incorrect h value: %s' % data['h'])
+                            del message['h']
+                    if 't' in data:
+                        try:
+                            data['t'] = float(data['t'])
+                        except ValueError:
+                            logging.error('Incorrect t value: %s' % data['t'])
+                            del message['t']
+                    if 'p' in data:
+                        try:
+                            data['p'] = float(data['p'])
+                        except ValueError:
+                            logging.error('Incorrect p value: %s' % data['p'])
+                            del message['p']
+                    if 'b' in data:
+                        try:
+                            data['b'] = float(data['b'])
+                        except ValueError:
+                            logging.error('Incorrect b value: %s' % data['b'])
+                            del message['b']
+
 class SocketEvent():
 
     def __init__(self, app, package):
