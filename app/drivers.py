@@ -356,32 +356,33 @@ class Package():
             if 'tp' in message and message['tp'] in ['ev', 'rs', 'rq']:
                 self.type = message['tp']
                 del message['tp']
-                self.message = message
 
-                    if 'h' in data:
-                        try:
-                            data['h'] = float(data['h'])
-                        except ValueError:
-                            logging.error('Incorrect h value: %s' % data['h'])
-                            del message['h']
-                    if 't' in data:
-                        try:
-                            data['t'] = float(data['t'])
-                        except ValueError:
-                            logging.error('Incorrect t value: %s' % data['t'])
-                            del message['t']
-                    if 'p' in data:
-                        try:
-                            data['p'] = float(data['p'])
-                        except ValueError:
-                            logging.error('Incorrect p value: %s' % data['p'])
-                            del message['p']
-                    if 'b' in data:
-                        try:
-                            data['b'] = float(data['b'])
-                        except ValueError:
-                            logging.error('Incorrect b value: %s' % data['b'])
-                            del message['b']
+                if 'h' in message:
+                    try:
+                        message['h'] = float(message['h'])
+                    except ValueError:
+                        logging.error('Incorrect h value: %s' % message['h'])
+                        del message['h']
+                if 't' in message:
+                    try:
+                        message['t'] = float(message['t'])
+                    except ValueError:
+                        logging.error('Incorrect t value: %s' % message['t'])
+                        del message['t']
+                if 'p' in message:
+                    try:
+                        message['p'] = float(message['p'])
+                    except ValueError:
+                        logging.error('Incorrect p value: %s' % message['p'])
+                        del message['p']
+                if 'b' in message:
+                    try:
+                        message['b'] = float(message['b'])
+                    except ValueError:
+                        logging.error('Incorrect b value: %s' % message['b'])
+                        del message['b']
+                
+                self.message = message
 
 class SocketEvent():
 
