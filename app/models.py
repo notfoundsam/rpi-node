@@ -102,8 +102,9 @@ class Mqtt(Base):
 
     id = Column(Integer, primary_key = True)
     name = Column(String(50))
-    topic = Column(String(200))
+    client_name = Column(String(200))
     order = Column(Integer)
+    enabled = Column(Boolean(True))
     timestamp = Column(DateTime)
 
     def __repr__(self):
